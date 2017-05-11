@@ -24,57 +24,35 @@ class AIOCache(BaseCache):
         })
         self._cache = caches.get('default')
 
-    async def get(self, oid, default=None):
+    def get_key(self, oid=None, container=None, id=None, variant=None):
+        key = ''
+        if oid is not None:
+            key = oid
+        elif container is not None:
+            key = container._p_oid
+        if id is not None:
+            key += '/' + id
+        if variant is not None:
+            key += '-' + variant
+        return key
+
+    async def get(self, **kwargs):
+        key = self.get_key(**kwargs)
         try:
-            val = await self._cache.get(oid)
+            val = await self._cache.get(key)
             if val is not None:
-                logger.debug('Retrieved {} from cache'.format(oid))
+                logger.debug('Retrieved {} from cache'.format(key))
             return val
         except Exception:
             logger.warn('Error getting cache value', exc_info=True)
 
-    async def set(self, ob, value):
-        try:
-            await self._cache.set(ob._p_oid, value)
-            logger.debug('set {} in cache'.format(ob._p_oid))
-        except Exception:
-            logger.warn('Error setting cache value', exc_info=True)
-
-    async def get_child(self, oid, id, prefix=''):
-        key = prefix + oid + '/' + id
-        try:
-            val = await self._cache.get(key)
-            if val is not None:
-                logger.debug('Retrieved {} from cache'.format(key))
-            return val
-        except Exception:
-            logger.warn('Error getting child cache value', exc_info=True)
-
-    async def set_child(self, oid, id, value, prefix=''):
-        key = prefix + oid + '/' + id
+    async def set(self, value, **kwargs):
+        key = self.get_key(**kwargs)
         try:
             await self._cache.set(key, value)
-            logger.debug('Set {} in cache'.format(key))
+            logger.debug('set {} in cache'.format(key))
         except Exception:
             logger.warn('Error setting cache value', exc_info=True)
-
-    async def get_len(self, oid):
-        key = oid + '-length'
-        try:
-            val = await self._cache.get(key)
-            if val is not None:
-                logger.debug('Retrieved {} from cache'.format(key))
-            return val
-        except Exception:
-            logger.warn('Error getting len', exc_info=True)
-
-    async def set_len(self, oid, val):
-        key = oid + '-length'
-        try:
-            await self._cache.set(key, val)
-            logger.debug('Set {} in cache'.format(key))
-        except Exception:
-            logger.warn('Error setting len', exc_info=True)
 
     async def clear(self):
         try:
@@ -86,7 +64,23 @@ class AIOCache(BaseCache):
     async def invalidate(self, ob):
         try:
             await self._cache.delete(ob._p_oid)
-            await self._cache.delete(ob._p_oid + '-length')
+            if ob.__of__:
+                # like an annotiation, invalidate diff
+                await self._cache.delete(ob._p_oid)
+                await self._cache.delete(
+                    self.get_key(oid=ob.__of__, id=ob.__name__,
+                                 variant='annotation'))
+                await self._cache.delete(
+                    self.get_key(oid=ob.__of__, variant='annotation-keys'))
+            else:
+                await self._cache.delete(
+                    self.get_key(container=ob, variant='len'))
+                await self._cache.delete(
+                    self.get_key(container=ob, variant='keys'))
+                await self._cache.delete(
+                    self.get_key(container=ob, variant='annotation-keys'))
+                await self._cache.delete(
+                    self.get_key(container=ob.__parent__, id=ob.id))
             logger.debug('Deleted {} from cache'.format(ob._p_oid))
         except Exception:
             logger.warn('Error invalidating object', exc_info=True)
