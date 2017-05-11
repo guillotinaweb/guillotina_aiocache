@@ -1,0 +1,62 @@
+{
+	"applications": ["guillotina_aiocache"],
+	"databases": [{
+		"db": {
+			"storage": "postgresql",
+			"transaction_strategy": "merge",
+      "cache_strategy": "aio",
+      "dsn": {
+        "scheme": "postgres",
+        "dbname": "guillotina",
+        "user": "postgres",
+        "host": "localhost",
+        "password": "",
+        "port": 5432
+      },
+			"pool_size": 40,
+      "read_only": false
+		}
+	}],
+	"host": "127.0.0.1",
+	"port": 8080,
+	"root_user": {
+		"password": "root"
+	},
+	"cors": {
+		"allow_origin": ["*"],
+		"allow_methods": ["GET", "POST", "DELETE", "HEAD", "PATCH"],
+		"allow_headers": ["*"],
+		"expose_headers": ["*"],
+		"allow_credentials": true,
+		"max_age": 3660
+	},
+	"utilities": [],
+	"logging": {
+    "version": 1,
+    "formatters": {
+      "brief": {
+        "format": "%(message)s"
+      },
+      "default": {
+        "format": "%(asctime)s %(levelname)-8s %(name)-15s %(message)s",
+        "datefmt": "%Y-%m-%d %H:%M:%S"
+      }
+    },
+    "handlers": {
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "formatter": "default",
+        "filename": "logconfig.log",
+        "maxBytes": 100024,
+        "backupCount": 3
+      }
+    },
+    "loggers": {
+      "guillotina_aiocache": {
+        "level": "DEBUG",
+        "handlers": ["file"],
+        "propagate": 0
+      }
+    }
+  }
+}
